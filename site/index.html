@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ASX Uranium 5B Tracker</title>
+<meta name="description" content="Cash runway for ASX uranium companies, built from Appendix 5B quarterly reports.">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#EDF0EB;--ink:#17261F;--mute:#5C6B63;--line:#CBD3CC;--acc:#B8960C;--bad:#B3261E;--ok:#2F6B4F;--card:#F6F8F5}
+@media(prefers-color-scheme:dark){:root{--bg:#121A16;--ink:#E6EDE8;--mute:#92A199;--line:#2A3830;--acc:#E0BC2E;--bad:#F07A70;--ok:#6FC39A;--card:#18221D}}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Public Sans",system-ui,sans-serif;font-variant-numeric:tabular-nums;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}
+a{color:inherit}a:focus-visible,th:focus-visible,summary:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.w{max-width:1120px;margin:0 auto;padding:0 18px}
+header{border-bottom:1px solid var(--line);padding:22px 0 16px}
+header h1{margin:0;font-size:30px;font-weight:800;letter-spacing:-.02em}
+header p{margin:4px 0 0;color:var(--mute);max-width:62ch}
+nav{margin-top:12px;display:flex;gap:18px;font-weight:600}nav a{text-decoration:none;color:var(--mute)}nav a.on{color:var(--ink);box-shadow:0 2px 0 var(--acc)}
+h2{font-size:20px;margin:26px 0 8px}
+.meta{color:var(--mute);font-size:13px;margin:14px 0}
+.sc{overflow-x:auto;border:1px solid var(--line);background:var(--card)}
+table{border-collapse:collapse;width:100%;min-width:760px}
+th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-weight:600;font-size:13px;color:var(--mute);cursor:pointer;user-select:none;position:sticky;top:0;background:var(--card)}
+th:first-child,td:first-child{text-align:left}
+tbody tr.r:hover{background:color-mix(in srgb,var(--acc) 10%,transparent)}
+.tk{font-weight:800}.nm{color:var(--mute);font-size:13px;display:block;max-width:220px;overflow:hidden;text-overflow:ellipsis}
+.bar{display:inline-block;width:110px;height:10px;background:var(--line);vertical-align:middle;margin-right:8px;text-align:left}
+.bar i{display:block;height:100%}
+.tag{font-size:12px;border:1px solid var(--line);padding:0 6px;margin-left:6px;color:var(--mute)}
+.bad{color:var(--bad);font-weight:600}.sec td{font-weight:800;text-align:left!important;background:var(--bg)}.b td{font-weight:800}
+.row2{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);margin:14px 0}
+.row2 div{background:var(--card);padding:10px 12px}.row2 small{display:block;color:var(--mute)}.row2 b{font-size:20px}
+ul.n{margin:6px 0;padding-left:18px}ul.n li{margin:3px 0;max-width:90ch}
+details{margin:10px 0}summary{cursor:pointer;font-weight:600}
+details p{max-width:80ch}
+footer{color:var(--mute);font-size:13px;padding:30px 0 40px}
+</style></head><body>
+<header><div class="w"><h1>ASX Uranium 5B Tracker</h1>
+<p>How many quarters of cash each ASX uranium company has left, taken straight from its Appendix 5B filing.</p>
+<nav><a href="#/" id="n1">Runway rankings</a><a href="#/about" id="n2">Method and data</a></nav></div></header>
+<main class="w" id="app"><p class="meta">Loading data...</p></main>
+<footer class="w">Data is extracted from company filings and may contain errors. Not investment advice.</footer>
+<script>
+const $=s=>document.querySelector(s),app=$('#app');
+let D,P={prices:{}},LAST='',S={k:'run',d:1};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const m=(v,d=2)=>v==null?'—':(v/1e6).toLocaleString('en-AU',{minimumFractionDigits:d,maximumFractionDigits:d});
+const sym=t=>t.split(':')[1],last=c=>c.quarters[c.quarters.length-1];
+const run=r=>r['8_3']<0&&r['8_6']!=null?r['8_6']/-r['8_3']:null;
+const ql=d=>({'03':'Mar','06':'Jun','09':'Sep','12':'Dec'}[d.slice(5,7)])+' '+d.slice(0,4);
+const near=(a,b)=>a==null||b==null||Math.abs(a-b)<=1000;
+function chk(r){const o=[];
+ if(!near(r['8_1'],r['1_9_q']))o.push('8.1 does not match 1.9');
+ if(r['8_1']!=null&&r['8_2']!=null&&!near(r['8_3'],r['8_1']+r['8_2']))o.push('8.3 does not equal 8.1 + 8.2');
+ if(r['8_4']!=null&&r['8_5']!=null&&!near(r['8_6'],r['8_4']+r['8_5']))o.push('8.6 does not equal 8.4 + 8.5');
+ if(!near(r['8_4'],r['4_6_q']))o.push('8.4 does not match cash at end (4.6)');
+ return o}
+const issues=r=>r.notes.concat(chk(r));
+function table(){
+ const L=Object.entries(D.companies).map(([t,c])=>{const r=last(c),p=P.prices[t]||{};
+  return{t,c,r,name:c.name,run:run(r),cash:r['8_4'],burn:r['8_3']<0?-r['8_3']:null,mcap:p.mcap,px:p.price,fl:issues(r).length,stale:r.quarter_end<LAST}});
+ const v=x=>S.k==='t'?x.t:x[S.k];
+ L.sort((a,b)=>{const x=v(a),y=v(b);if(x==null&&y==null)return 0;if(x==null)return 1;if(y==null)return -1;return(x>y?1:x<y?-1:0)*S.d});
+ const H=[['t','Company'],['q','Quarter'],['cash','Cash A$m'],['burn','Outgoings A$m'],['run','Runway (quarters)'],['rep','Reported 8.7'],['px','Price A$'],['mcap','Mkt cap A$m'],['fl','Flags']];
+ app.innerHTML=`<p class="meta">Latest filing per company. Runway = total available funding (8.6) divided by total relevant outgoings (8.3), the same maths as the form. Prices: ${P.as_of?new Date(P.as_of).toLocaleDateString('en-AU'):'not loaded yet, they appear after the first scheduled update'}.</p>
+ <div class="sc"><table><thead><tr>${H.map(([k,l])=>`<th tabindex="0" data-k="${k}">${l}${S.k===k?(S.d>0?' ▲':' ▼'):''}</th>`).join('')}</tr></thead><tbody>${L.map(x=>{
+  const pc=Math.min(x.run||0,12)/12*100,col=x.run==null?'var(--line)':x.run<2?'var(--bad)':'var(--acc)';
+  return`<tr class="r" data-t="${x.t}" style="cursor:pointer"><td><a class="tk" href="#/c/${sym(x.t)}">${x.t}</a>${x.stale?'<span class="tag">older quarter</span>':''}<span class="nm">${esc(x.name)}</span></td><td>${ql(x.r.quarter_end)}</td><td>${m(x.cash)}</td><td>${m(x.burn)}</td>
+  <td>${x.run==null?'n/a':`<span class="bar"><i style="width:${pc}%;background:${col}"></i></span><span class="${x.run<2?'bad':''}">${x.run.toFixed(1)}</span>`}</td><td>${x.r['8_7_display']||'n/a'}</td><td>${x.px?x.px.toFixed(3):'—'}</td><td>${m(x.mcap,1)}</td><td class="${x.fl?'bad':''}">${x.fl||''}</td></tr>`}).join('')}</tbody></table></div>`;
+ app.querySelectorAll('th').forEach(h=>{const f=()=>{const k=h.dataset.k;if(k==='q')return;S=S.k===k?{k,d:-S.d}:{k,d:k==='t'||k==='run'||k==='fl'&&0?1:-1};if(k==='run')S.d=S.k===k&&S.d===-1?-1:1;table()};h.onclick=f;h.onkeydown=e=>e.key==='Enter'&&f()});
+ app.querySelectorAll('tr.r').forEach(r=>r.onclick=e=>{if(e.target.tagName!=='A')location.hash='#/c/'+sym(r.dataset.t)})}
+const R=[['Operating'],['Receipts from customers (1.1)','1_1_q'],['Exploration and evaluation (1.2a)','1_2a_q'],['Staff costs (1.2d)','1_2d_q'],['Administration and corporate (1.2e)','1_2e_q'],['Net operating cash flow (1.9)','1_9_q',1],
+['Investing'],['Exploration and evaluation (2.1d)','2_1d_q'],['Net investing (2.6)','2_6_q',1],
+['Financing'],['Equity raised (3.1)','3_1_q'],['Net financing (3.10)','3_10_q',1],
+['Cash'],['Cash at start of quarter (4.1)','4_1_q'],['Cash at end of quarter (4.6)','4_6_q',1],
+['Funding runway (section 8)'],['Total relevant outgoings (8.3)','8_3'],['Unused finance facilities (8.5)','8_5'],['Total available funding (8.6)','8_6',1]];
+function company(s){
+ const t=Object.keys(D.companies).find(k=>sym(k)===s);if(!t){app.innerHTML='<p class="meta">No company with that ticker. <a href="#/">Back to rankings</a></p>';return}
+ const c=D.companies[t],Q=c.quarters,r=last(Q),p=P.prices[t]||{};
+ const body=R.map(([l,k,b])=>k?`<tr class="${b?'b':''}"><td>${l}</td>${Q.map(x=>`<td>${m(x[k])}</td>`).join('')}</tr>`:`<tr class="sec"><td colspan="${Q.length+1}">${l}</td></tr>`).join('')
+ +`<tr class="b"><td>Runway, calculated (quarters)</td>${Q.map(x=>`<td>${run(x)==null?'n/a':run(x).toFixed(1)}</td>`).join('')}</tr><tr><td>Runway, reported by company (8.7)</td>${Q.map(x=>`<td>${x['8_7_display']||'n/a'}</td>`).join('')}</tr>`;
+ const br=[];for(let i=1;i<Q.length;i++)if(!near(Q[i]['4_1_q'],Q[i-1]['4_6_q']))br.push(`${ql(Q[i].quarter_end)} opening cash does not match ${ql(Q[i-1].quarter_end)} closing cash`);
+ const nt=Q.flatMap(x=>issues(x).map(i=>`${ql(x.quarter_end)}: ${i}`));
+ app.innerHTML=`<p class="meta"><a href="#/">Back to rankings</a></p><h2 style="margin-top:0">${t} <span style="color:var(--mute);font-weight:600">${esc(c.name)}</span></h2>
+ <div class="row2"><div><small>Last price A$</small><b>${p.price?p.price.toFixed(3):'—'}</b></div><div><small>Market cap A$m</small><b>${m(p.mcap,1)}</b></div><div><small>52 week range A$</small><b>${p.lo52&&p.hi52?p.lo52.toFixed(2)+' to '+p.hi52.toFixed(2):'—'}</b></div><div><small>Cash at end A$m</small><b>${m(r['8_4'])}</b></div><div><small>Runway (quarters)</small><b class="${run(r)!=null&&run(r)<2?'bad':''}">${run(r)==null?'n/a':run(r).toFixed(1)}</b></div></div>
+ <div class="sc"><table style="min-width:0"><thead><tr><th>A$ millions</th>${Q.map(x=>`<th style="cursor:default">${ql(x.quarter_end)}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>
+ <p class="meta">Filed ${Q.map(x=>x.compliance_date).join(', ')}. Sources: ${Q.map(x=>esc(x.source_file)).join(', ')}.</p>
+ <h2>Checks and data notes</h2><ul class="n">${br.length?br.map(b=>`<li class="bad">${b}</li>`).join(''):(Q.length>1?'<li>Closing cash matches the next quarter\'s opening cash.</li>':'')}${nt.length?nt.map(n=>`<li>${esc(n)}</li>`).join(''):'<li>No issues found.</li>'}</ul>
+ <h2>Company answers on funding (8.8)</h2>${[['8_8_1','Does the entity expect these cash outflows to continue?'],['8_8_2','Has it taken steps, or does it propose to, to raise further cash?'],['8_8_3','Does it expect to meet its objectives?']].map(([k,l])=>`<details><summary>${l}</summary><p>${esc(r['txt_'+k]||'Not provided.')}</p></details>`).join('')}`}
+function about(){app.innerHTML=`<h2 style="margin-top:0">Method and data</h2><ul class="n"><li>Source: the Appendix 5B quarterly cash flow report each company lodges with the ASX. Figures are in full Australian dollars, shown here in A$ millions.</li>
+<li>Runway is item 8.6 (total available funding) divided by item 8.3 (total relevant outgoings). It is shown beside the company's own reported 8.7, which companies round.</li>
+<li>Flags count extraction notes and failed cross-checks: 8.1 should equal 1.9, 8.3 should equal 8.1 plus 8.2, 8.6 should equal 8.4 plus 8.5, and 8.4 should equal cash at end.</li>
+<li>Where a company reports 8.7 as "over 10", that is shown as given and the calculated runway is used for ranking.</li>
+<li>Some rows were realigned by hand after extraction; each is marked "Cleaned" on its company page.</li>
+<li>Prices and market caps come from Yahoo Finance and are updated on weekdays after the ASX close.</li></ul>`}
+function go(){const h=location.hash||'#/';$('#n1').className=h==='#/'?'on':'';$('#n2').className=h==='#/about'?'on':'';
+ if(!D)return;h.startsWith('#/c/')?company(h.slice(4)):h==='#/about'?about():table();scrollTo(0,0)}
+Promise.all([fetch('data/5b.json').then(r=>r.json()),fetch('data/prices.json').then(r=>r.json()).catch(()=>P)]).then(([d,p])=>{D=d;P=p;LAST=Object.values(D.companies).map(c=>last(c).quarter_end).sort().pop();go()}).catch(()=>{app.innerHTML='<p class="meta">Could not load data. Open this through a web server, not as a local file.</p>'});
+addEventListener('hashchange',go);
+</script></body></html>
